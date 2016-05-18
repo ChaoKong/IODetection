@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -22,6 +24,7 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -42,6 +45,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.graphics.LightingColorFilter;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -59,6 +64,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
@@ -69,6 +75,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class MainActivity extends Activity implements
@@ -76,7 +83,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	
 	
 	
-	private static final String TAG = "MainActivity";
+	private static final String TAG = "IODetectionMainActivity";
+	public Logger logger = new Logger(true,TAG);
 	int End_truth = -10;
     NotificationManager manager;
     Notification myNotication;
@@ -92,11 +100,11 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	JSONObject Result2 = null;
 
 	
-	
-	TextView textAudioResult_reading;
-	TextView textLightResult_reading;
+
 	TextView textAllResult_reading;
-	TextView textLocationSingle_reading;
+	TextView textResultComparison_reading;
+	//TextView textConfidence_reading;
+	
 	
 	File ResultFile = null;
 	FileOutputStream foutResult = null;
@@ -173,6 +181,9 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	OutputStreamWriter outwriterAllInfo = null;
 	
 	
+	String tmpGroundTruthFile_str="tmpGroundTruth.txt";
+	
+	
 	WifiManager wifiManager;
 	WifiInfo wifiInfo = null; 
 	
@@ -227,7 +238,30 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     public int TestType =0;
     public int Result_TestType = 0;
     public int runAudioTest=0;
+    public int audio_in_use = 0;
     //   1 : light test;  2: Audio test; 3: All test;
+    
+    public String deviceModel;
+    
+    private SharedPreferences sp_audio,sp1_audio;
+    private SharedPreferences.Editor spEditor_audio;
+    
+    private SharedPreferences sp_sent,sp1_sent;
+    private SharedPreferences.Editor spEditor_sent;
+    
+    private String audio_state = "TRUE";
+    
+    private String sent_state = "FALSE";
+    
+	Button AudioBtn;
+	Button IndoorBtn;
+	Button OutdoorBtn;
+	Button AllTestBtn;
+	
+
+
+    private ProgressBar mProgress;
+    private int mProgressStatus = 0;
 	
 	
 
@@ -240,16 +274,21 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		
 		setContentView(R.layout.activity_main);
 		
-		textAudioResult_reading = (TextView) findViewById(R.id.Audio_result);
-		textLightResult_reading = (TextView) findViewById(R.id.Light_result);
+
 		textAllResult_reading = (TextView) findViewById(R.id.All_result);
-		textLocationSingle_reading = (TextView) findViewById(R.id.LocationSingle_reading);		
+		//textConfidence_reading = (TextView) findViewById(R.id.Confidence);
+		textResultComparison_reading  = (TextView) findViewById(R.id.UserInput_reading);
+		IndoorBtn = (Button) findViewById(R.id.Indoor_switch);
+		OutdoorBtn =  (Button) findViewById(R.id.Outdoor_switch);
+		AllTestBtn=(Button) findViewById(R.id.All_switch);
+		mProgress = (ProgressBar) findViewById(R.id.process_bar);
 		
 		
-		context = this.context;
+		
+		context = this;
 		
 		root = android.os.Environment.getExternalStorageDirectory();
-		dir = new File(root.getAbsolutePath() + "/IOdetector");
+		dir = new File(root.getAbsolutePath() + "/IODetection");
 		dir.mkdirs();
 		Groundtruthfile_str = dir+"/GroundTruthFile.txt";
 		
@@ -290,33 +329,33 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	public void onDestroy() {
 	    super.onDestroy();
 	    unregisterReceiver(broadcastReceiver);
-	    Log.d("status", "onDestroy");
+	    logger.d("status"+"onDestroy");
 	}
 	
 	@Override
 	public void onPause() {
 	    super.onPause();
-	    Log.d("status", "onPause");
+	    logger.d("status"+"onPause");
 	}
 	
 	@Override
 	public void onStart() {
 	    super.onStart();
-	    Log.d("status", "onstart");
+	    logger.d("status"+"onstart");
 
 	}
 	
 	@Override
 	public void onRestart() {
 	    super.onRestart();
-	    Log.d("status", "onRestart");
+	    logger.d("status"+"onRestart");
 
 	}
 	
 	@Override
 	public void onStop() {
 	    super.onStop();
-	    Log.d("status", "onStop");
+	    logger.d("status"+ "onStop");
 	    this.finish();
 	}
 	
@@ -350,7 +389,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
             Bundle b = intent.getExtras();
  
             String message = b.getString("message");
-            Log.d("message in broadcastReceiver", message);
+            logger.d("message in broadcastReceiver"+message);
 			if (message!=null)
 			{
 				
@@ -360,7 +399,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				Log.d("get message from service intent", Ground_truth.toString());
+				logger.d("get message from service intent"+Ground_truth.toString());
 				
 				mGoogleApiClient.connect();
 				LocationFlag = 0;
@@ -368,53 +407,26 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				LocationThread = null;
 				getLocation();
 				
-				final CharSequence[] items = { "Indoor", "Outdoor", "Unknown" };
-
-
-
-				AlertDialog.Builder builder = new AlertDialog.Builder(context);
-				builder.setTitle("Active Test");
-				builder.setItems(items, new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int item) {
-						switch (item) {
-						case 0:
-							End_truth = -1;
-							break;
-						case 1:
-							End_truth = 1;
-							break;
-						case 2:
-							End_truth = 0;
-							break;
-						default:
-							End_truth = -10;
-						}
-						try {
-							Log.d("add end ", Ground_truth.toString());
-							
-							Ground_truth.put("End_ground_truth", End_truth);
-							Log.d("add end finish", Ground_truth.toString());
-						} catch (JSONException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						Log.d("start to send information","start to sending information");
-						Log.d("add end groud truth", String.valueOf(End_truth));
-						waitSending();
-					}
-				});
-				AlertDialog alert = builder.create();
-				alert.show();
-				
-				
 				try {
 					JSONObject tmp_Result2 = Ground_truth.getJSONObject("result2");	
+					logger.d(Ground_truth.toString());
+					logger.d("tmp_result2: "+tmp_Result2.toString());
 					Result_TestType = tmp_Result2.getInt("testType");
-					if (Result_TestType==3)
-					{
-						Ground_truth.put("Start_ground_truth", End_truth);
-					}
-					Log.d("testType in main activity", String.valueOf(Result_TestType));
+					JSONObject callEnd = Ground_truth.getJSONObject("callEnd");
+					audio_in_use = callEnd.getInt("Audioflag");
+					logger.d("audio in use: "+String.valueOf(audio_in_use));
+					logger.d("result test type: "+String.valueOf(Result_TestType));
+					
+//					if (Result_TestType==3)
+//					{
+//						Ground_truth.put("Start_ground_truth", End_truth);
+//					}
+					
+					writeToFile(Ground_truth.toString(),tmpGroundTruthFile_str);
+					updateSentState("FALSE",context);
+					Ground_truth.put("End_ground_truth",-10);
+					//SendInformation();
+					logger.d("testType in main activity"+ String.valueOf(Result_TestType));
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -422,7 +434,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 				try {
 					
-					if (Result_TestType==3)
+					if ((Result_TestType==3) && (audio_in_use==1))
 					{
 						Result1 = Ground_truth.getJSONObject("result");
 						
@@ -431,8 +443,6 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 						result2_Str = Result2.getString("Result");
 						calculate_mode1 = Result1.getInt("mode");
 						calculate_mode2 = Result2.getInt("mode");
-						printResults(result1_Str, 1, calculate_mode1,1);
-						printResults(result2_Str, 2, calculate_mode2,2);
 						printResults(result2_Str, 2, calculate_mode2,3);}
 					else
 					{
@@ -454,15 +464,60 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
         };
 	};
 	
+	
+	
+//    public void updateAudioState(String state,Context context){
+//        sp_audio = PreferenceManager.getDefaultSharedPreferences(context);
+//        spEditor_audio = sp_audio.edit();
+//        spEditor_audio.putString("audio_state", state);
+//        spEditor_audio.commit();
+//        logger.d( "finish update audio state"+state);
+//    }
+//    
+//    public String getAudioState(Context context){
+//        sp1_audio = PreferenceManager.getDefaultSharedPreferences(context);
+//        String st =sp1_audio.getString("audio_state", "TRUE");
+//        logger.d("get audio state as :"+st);
+//        return st;
+//    }
+    
+    
+    public void updateSentState(String state,Context context){
+        sp_sent = PreferenceManager.getDefaultSharedPreferences(context);
+        spEditor_sent = sp_sent.edit();
+        spEditor_sent.putString("send_state", state);
+        spEditor_sent.commit();
+        logger.d( "update state to: "+state);
+    }
+    
+    public String getSentState(Context context){
+        sp1_sent = PreferenceManager.getDefaultSharedPreferences(context);
+        String st =sp1_sent.getString("send_state", "");
+        logger.d("get send state as :"+st);
+        return st;
+    }
+	
     
     public void printResults(String result_str,int CallType, int calculate_mode, int testType){
     	
     	String tmp_result_str = result_str;
     	
-		if (testType == 3) {
+		if ((testType == 3) && (audio_in_use ==1) ) {
+			
 			int tmp_result = 0;
 			double tmp_confidence = 0;
 			String tmp_result_Str = "";
+			String[] splitStr_result1 = result1_Str.split("\\s+");
+			result1 = Integer.parseInt(splitStr_result1[0]);
+			result1_con = Double.parseDouble(splitStr_result1[1]);
+			
+			String[] splitStr_result2 = result2_Str.split("\\s+");
+			result2 = Integer.parseInt(splitStr_result2[0]);
+			result2_con = Double.parseDouble(splitStr_result2[1]);
+			logger.d("result1_str: "+result1_Str);
+			logger.d("result2_str: "+result2_Str);
+			
+			
 			if (result1 == result2) {
 				tmp_result = result1;
 				tmp_confidence = 1 - (1 - result1_con) * (1 - result2_con);
@@ -478,54 +533,41 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			}
 
 			if (tmp_result == -1) {
-				tmp_result_Str = "Result: " + "indoor   " + "     confidence:  " + tmp_confidence;
+				tmp_result_Str = "Detection: " + "You are indoor !";
+				
 			} else if (tmp_result == 1) {
 
-				tmp_result_Str = "Result:	" + "outdoor   " + "     confidence:  " + tmp_confidence;
+				tmp_result_Str = "Detection: " + "You are outdoor !";
 
 			}
-			textAllResult_reading.setText("All result:     " + tmp_result_Str);
-
+			NumberFormat formatter = new DecimalFormat("0.###"); 
+			String confidence_str = formatter.format(tmp_confidence);
+			textAllResult_reading.setText(tmp_result_Str);
+			//textConfidence_reading.setText("Confidence: "+confidence_str);
 		}
 
-		if (testType == 1) {
+		else {
 			String[] splitStr_result1 = tmp_result_str.split("\\s+");
 			result1 = Integer.parseInt(splitStr_result1[0]);
 			result1_con = Double.parseDouble(splitStr_result1[1]);
 			if (result1 == -1) {
-				result1_Str = "Result: " + "indoor   " + "     confidence:  " + splitStr_result1[1];
+				result1_Str = "Detection: " + "You are indoor !";
 			} else if (result1 == 1) {
-				if ((result1_con < 0.9) && (calculate_mode == 1)) {
-					result1_Str = "Result: " + "Unknown   ";
-
-				} else {
-					result1_Str = "Result:	" + "outdoor   " + "     confidence:  " + splitStr_result1[1];
-				}
+				
+					result1_Str = "Detection: " + "You are outdoor !";
+				
 			} else {
-				result1_Str = "Result: " + "Unknown   ";
+				result1_Str = "Detection: " + "Unknown";
 			}
-			textLightResult_reading.setText("Light result:     " + result1_Str);
+			NumberFormat formatter = new DecimalFormat("0.###"); 
+			String confidence_str = formatter.format(result1_con);
+			textAllResult_reading.setText(result1_Str);
+			//textConfidence_reading.setText("Confidence: "+confidence_str);
+			
 		}
-
-		if (testType == 2) {
-			String[] splitStr_result2 = tmp_result_str.split("\\s+");
-			result2 = Integer.parseInt(splitStr_result2[0]);
-			result2_con = Double.parseDouble(splitStr_result2[1]);
-			if (result2 == -1) {
-				result2_Str = "Result: " + "indoor   " + "     confidence:  " + splitStr_result2[1];
-			} else if (result2 == 1) {
-				if ((result2_con < 0.9) && (calculate_mode == 1)) {
-					result2_Str = "Result:	" + "Unknown   ";
-				} else {
-					result2_Str = "Result:	" + "outdoor   " + "     confidence:  " + splitStr_result2[1];
-				}
-			} else {
-				result2_Str = "Result:	" + "Unknown   ";
-			}
-			textAudioResult_reading.setText("Audio result  :     " + result2_Str);
-
-		}
-    		
+		
+		AllTestBtn.setText("Issue Detection");
+		
     
     }
     
@@ -558,7 +600,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 																			// entity
 						String s = getStringFromInputStream(in);
 						
-						Log.d("Jack-Response", s);
+						logger.d("Jack-Response"+ s);
 					}
 					Ground_truth = null;
 					Ground_truth = new JSONObject();
@@ -570,14 +612,14 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		};
 
 		t.start();	
-		Log.d("send start", Ground_truth.toString());
+		logger.d("send start"+ Ground_truth.toString());
 		if (waitForSending!= null)
 		{
 			if (!waitForSending.isInterrupted());
 			{
 				waitForSending.interrupt();
 				waitForSending = null;
-				Log.d("stop waitForSending", "stop waitForSending in SendInformation");
+				logger.d("stop waitForSending: stop waitForSending in SendInformation");
 				
 			}
 		}
@@ -608,16 +650,18 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				while(!Thread.interrupted())
 			    {
 					if (Ground_truth != null) {
-						Log.d("ground truth in wait sending",Ground_truth.toString() );
+						logger.d("ground truth in wait sending"+Ground_truth.toString() );
 						if ( Ground_truth.has("Location2") && Ground_truth.has("End_ground_truth")) {
-							Log.d("satify requirements", "triger the SendInformation ");
+							logger.d("satify requirements: triger the SendInformation ");
 							SendInformation();
 							break;
 						}
 					} else {
 						break;
 					}
-				
+					logger.d("return waitForsending thread");
+					Thread.currentThread().interrupt();
+					return;			
 			    }
 			}
 		};
@@ -652,6 +696,50 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		return sb.toString();
 
 	}
+	
+	
+    private void writeToFile(String data, String file) {
+        try {
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(openFileOutput(file, Context.MODE_PRIVATE));
+            outputStreamWriter.write(data);
+            outputStreamWriter.close();
+            logger.d( "write file successfully");
+        }
+        catch (IOException e) {
+            //Log.e(TAG, "File write failed: " + e.toString());
+        } 
+    }
+    
+    
+    private String readFromFile(String file) {
+
+        String ret = "";
+
+        try {
+            InputStream inputStream = openFileInput(file);
+
+            if ( inputStream != null ) {
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                String receiveString = "";
+                StringBuilder stringBuilder = new StringBuilder();
+
+                while ( (receiveString = bufferedReader.readLine()) != null ) {
+                    stringBuilder.append(receiveString);
+                }
+
+                inputStream.close();
+                ret = stringBuilder.toString();
+            }
+        }
+        catch (FileNotFoundException e) {
+            //Log.e(TAG, "File not found: " + e.toString());
+        } catch (IOException e) {
+            //Log.e(TAG, "Can not read file: " + e.toString());
+        }
+
+        return ret;
+    }
 	
 
 	@Override
@@ -696,7 +784,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		if (LocationFlag == 0){
 			location_global = Double.toString(location.getLatitude()) + " "+Double.toString(location.getLongitude());	
 			LocationFlag = 1;	
-			Log.d("locationChanged", location_global);
+			logger.d("locationChanged"+ location_global);
 		}
 
 	}
@@ -706,12 +794,12 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 		start_location_time = System.currentTimeMillis();
 		stop_location_time = start_location_time + 3000;
-	    Log.d("start_location_time start", String.valueOf(start_location_time));
-		Log.d("stop_location_time start", String.valueOf(stop_location_time));
+	    logger.d("start_location_time start"+String.valueOf(start_location_time));
+		logger.d("stop_location_time start"+String.valueOf(stop_location_time));
 
 		if (LocationThreadstart == 0) {
 			LocationThreadstart = 1;
-			Log.d("start Locationthread", "start Location thread");
+			logger.d("start Locationthread: start Location thread");
 			LocationThread = new Thread() {
 
 				public void run() {
@@ -720,15 +808,15 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 						while (true) {
 
 							if (start_location_time > stop_location_time) {
-								Log.d("start_location_time", String.valueOf(start_location_time));
-								Log.d("stop_location_time", String.valueOf(stop_location_time));
+								logger.d("start_location_time"+ String.valueOf(start_location_time));
+								logger.d("stop_location_time"+ String.valueOf(stop_location_time));
 								location2 = "fail";
 								break;
 							}
 
 							if ((mLastLocation != null) || (location_global.length() > 2)) {
-								Log.d("mLastLocation", mLastLocation.toString());
-								Log.d("location_global", location_global);
+								logger.d("mLastLocation"+ mLastLocation.toString());
+								logger.d("location_global"+ location_global);
 								if (mLastLocation != null) {
 									location2 = Double.toString(mLastLocation.getLatitude()) + " "
 											+ Double.toString(mLastLocation.getLongitude());
@@ -740,7 +828,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 								break;
 							}
 							start_location_time = System.currentTimeMillis();
-							//Log.d("get location in thread", "get location in thread");
+							//logger.d("get location in thread", "get location in thread");
 						}
 						
 
@@ -758,20 +846,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 	private void putLocation() {
 		
-		Log.d("put location 2", location2);
+		logger.d("put location 2"+location2);
 
 		if (Ground_truth!=null)
 		{
 			try {
 				Ground_truth.put("Location2",location2);
-				LocationThreadstart = 0;
-				textLocationSingle_reading.post(new Runnable() {
-				    public void run() {
-				    
-				    	textLocationSingle_reading.setText("Location:  " + location2);
-				    	
-				    } 
-				});		
+				LocationThreadstart = 0;		
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -782,11 +863,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	
     private void init(){
     		
-    	Context context = this;
-		am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-		mediaPlayer = MediaPlayer.create(this, R.raw.chirp814);
-		mediaPlayer.setVolume(0.6f, 0.6f);
-		Log.d("mediaPlayer create",mediaPlayer.toString());
+
 		InputRGBFile = new File("/sys/devices/virtual/sensors/light_sensor/raw_data");
 		
 		
@@ -800,12 +877,12 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			} catch (FileNotFoundException e2) {
 				// TODO Auto-generated catch block
 				RGBAvailabe = 0;
-				Log.d("try to read RGB, unavailable", "try to read RGB, unavailable");
+				logger.d("try to read RGB, unavailable"+ "try to read RGB, unavailable");
 				e2.printStackTrace();
 				
 			}
 						
-			Log.d("RGB available", String.valueOf(RGBAvailabe));
+			logger.d("RGB available"+String.valueOf(RGBAvailabe));
 			
 		}
 		
@@ -884,7 +961,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	
     	TestType = 0;
     	
-    	String deviceModel = Build.MODEL;
+    	deviceModel = Build.MODEL;
+    	Log.i(TAG, deviceModel);
     	String S6 = "g920t";
     	if (deviceModel.toLowerCase().contains(S6.toLowerCase())){
     		isS6 =1;
@@ -894,50 +972,90 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	Log.i(TAG, "init successfully");
     }
     
-    
-	boolean isAudioTest = false;
-
-	public void AudioSwitch(View view) throws IOException {
-		Button AudioTestBtn=(Button) findViewById(R.id.Audio_switch);
 		
-
-		init();
+//	public void AudioEnableSwitch(View view) throws IOException {
+//		
+//		if (isS6==1) {
+//			audio_state = getAudioState(context);
+//			logger.d("get audio state from getAudiostate:	" + audio_state);
+//			if (audio_state.equals("FALSE")) {
+//				audio_state = "TRUE";
+//				updateAudioState(audio_state, context);
+//				AudioBtn.setText("Audio in using (push to stop audio)");
+//				logger.d("set audio in using");
+//
+//			} else {
+//				audio_state = "FALSE";
+//
+//				updateAudioState(audio_state, context);
+//				AudioBtn.setText("Audio stopped (push to use audio)");
+//				logger.d("set audio to stop");
+//			}
+//		}
+//		else
+//		{
+//        	AudioBtn.setText("Audio not supported");
+//			
+//		}
+//	}
+	
+	
+	public void IndoorSwitch(View view) throws IOException {
 		
-		TestType = 2;
-		
-		registerProxiSensor();
-
-		if (isS6!=1){
-			AudioTestBtn.setText("Audio test not supported");
-		}
-		else
+		sent_state = getSentState(context);
+		logger.d("sent state in indoor switch: "+sent_state);
+		if (sent_state.equals("FALSE"))
 		{
-			AudioTestBtn.setText("Audio test");
-		}
-	} 
-	
-	
-	boolean isLightTest = false;
+			updateSentState("TRUE",context);
+			
+			String tmp_groundth = readFromFile(tmpGroundTruthFile_str);
+			logger.d("read tmp groud truth from file: "+tmp_groundth);
+			try {
+				Ground_truth = null;
+				Ground_truth = new JSONObject(tmp_groundth);
+				Ground_truth.put("End_ground_truth",-1);
+				writeToFile("clear",tmpGroundTruthFile_str);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			logger.d("ground truth in indoor switch: "+Ground_truth.toString());
 
-	public void LightSwitch(View view) throws IOException {
-		Button LightTestBtn=(Button) findViewById(R.id.Light_switch);		
-		
-		init();
-		
-		TestType = 1;
-		
-		registerProxiSensor();
-
-		LightTestBtn.setText("light test");
-
-	
+		}		
 	}
+	
+	
+	public void OutdoorSwitch(View view) throws IOException {
+		sent_state = getSentState(context);
+		logger.d("sent state in outdoor switch: "+sent_state);
+		if (sent_state.equals("FALSE"))
+		{
+			updateSentState("TRUE",context);
+			
+			String tmp_groundth = readFromFile(tmpGroundTruthFile_str);
+			logger.d("read tmp groud truth from file: "+tmp_groundth);
+			try {
+				Ground_truth = null;
+				Ground_truth = new JSONObject(tmp_groundth);
+				Ground_truth.put("End_ground_truth",-1);
+				writeToFile("clear",tmpGroundTruthFile_str);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			logger.d("ground truth in outdoor switch: "+Ground_truth.toString());
+
+		}
+	}
+	
+	
 	
 	
 	private void runAudiotest()
 	{
-		if (isS6==1)
+		if (isS6==1) 
 		{
+			Audio_flag = 1;
 			startRecording();
 			try {
 				Thread.sleep(80);
@@ -955,7 +1073,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 			stopEmitting();
 			stopRecording();
-			Audio_flag = 1;
+		
 		}
 		else
 		{
@@ -968,19 +1086,44 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	boolean isAllTest = false;
 
 	public void AllSwitch(View view) throws IOException {
-		Button AllTestBtn=(Button) findViewById(R.id.All_switch);
+
+		
+		AllTestBtn.setText("Detecting...");	
+		AllTestBtn.getBackground().setColorFilter(new LightingColorFilter(0xFFFFFFFF, 0xFFAA0000));
+		textAllResult_reading.setText("Detection:	");
+		//textConfidence_reading.setText("Confidence: ");
+		
+        new Thread(new Runnable() {
+            public void run() {
+            	mProgressStatus = 0;
+                while (mProgressStatus < 100) {
+                	
+        			try {
+        				Thread.sleep(70);
+        			} catch (InterruptedException e) {
+        				// TODO Auto-generated catch block
+        				e.printStackTrace();
+        			}
+                    mProgressStatus = mProgressStatus + 5;
+
+					// Update the progress bar
+                    mProgress.post(new Runnable() {
+                        public void run() {
+                            mProgress.setProgress(mProgressStatus);
+                        }
+                    });
+                }
+            }
+        }).start();
 		
 		init();
 		
 		TestType = 3;
-		
+		logger.d("start to register proxisensro");
 		registerProxiSensor();
 
-		AllTestBtn.setText("Light and Audio test");
-				
-
-
-	
+		
+		
 	} 
     
  
@@ -995,7 +1138,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	    TValue = new ArrayList<Integer>();
 	    WifiValue = new ArrayList<Integer>();	
 	    long curTime = System.currentTimeMillis();
-	    Log.d("create array", "create array "+String.valueOf(curTime));
+	    logger.d("create array"+"create array "+String.valueOf(curTime));
     	
 		if(LightSensor != null){
 			
@@ -1020,7 +1163,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			{
 				proxiThread.interrupt();
 				proxiThread = null;
-				Log.d("stop proxi thread", "stop proxi thread in register light");
+				logger.d("stop proxi thread: stop proxi thread in register light");
 				
 			}
 		}
@@ -1089,15 +1232,22 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				}
 			}
 			mySensorManager.registerListener(ProxiSensorListener, ProxiSensor, SensorManager.SENSOR_DELAY_FASTEST);
+			logger.d("register proximity sensor");
 		}		
     }
         
 
     private void startEmitting(){
+    	
+    	Context context = this;
+		am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+		mediaPlayer = MediaPlayer.create(this, R.raw.chirp814);
+		mediaPlayer.setVolume(0.6f, 0.6f);
+		logger.d("mediaPlayer create"+mediaPlayer.toString());
     	Previous_volume = am.getStreamVolume(AudioManager.STREAM_MUSIC);
-    	Log.d("previous volume", String.valueOf(Previous_volume));
+    	logger.d("previous volume: "+ String.valueOf(Previous_volume));
     	am.setStreamVolume(AudioManager.STREAM_MUSIC,10,0);
-    	Log.d("current volume", String.valueOf(10));
+    	logger.d("current volume: "+ String.valueOf(10));
     	mediaPlayer.setVolume(0.6f, 0.6f);
     	mediaPlayer.start();	
     }
@@ -1244,13 +1394,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     			int Wifi_RSSI=0;
     			long timeSta = System.currentTimeMillis();
     			String curTimeStr = ""+timeSta+";   ";
-    			Log.d("light sensor change:", curTimeStr);
+    			logger.d("light sensor change:"+ curTimeStr);
 				
 			    			
     			if (lightValue.size()==5){
    				
     				
-    				Log.d("light value size is 5", "light value size is 5");
+    				logger.d("light value size is 5");
     				RecordFlag =0;
     				double Light_Sum = 0;
     				double R_Sum = 0;
@@ -1276,18 +1426,19 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     					
     				String Light_RGB_Wifi = String.valueOf(Light_Sum)+" "+String.valueOf(R_Sum)+" "+String.valueOf(G_Sum)+" "+String.valueOf(B_Sum)+" "+String.valueOf(W_Sum)+" "+String.valueOf(Wifi_Sum);
     				   
-    				Log.d("get Ave info","get Ave info");
-             
-                    sendFinalJSON(TestType,Light_RGB_Wifi,Audio_flag);	
+    				logger.d("get Ave info");
+    				
+    				sendFinalJSON(TestType,Light_RGB_Wifi,Audio_flag);
+    				
                     unregisterLightSensor();
-                    Log.d("unregister light sensor", "unregister light");
+                    logger.d("unregister light sensor");
     			 					
     			}
 
     			
 	            
 	            lightvalue = (double) (event.values[0]);
-	            Log.d(TAG, String.valueOf(lightvalue));				
+	            logger.d(String.valueOf(lightvalue));				
     			SupplicantState supState; 
     			
     			wifiInfo = wifiManager.getConnectionInfo();
@@ -1295,7 +1446,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     			supState = wifiInfo.getSupplicantState();
 
 	            
-	            Log.d(TAG, String.valueOf(wifiInfo.getRssi()));
+	            logger.d(String.valueOf(wifiInfo.getRssi()));
 	            Wifi_RSSI = wifiInfo.getRssi();
 	            finalString = new StringBuilder();
 	            if (RGBAvailabe==1) {
@@ -1325,7 +1476,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 								GValue.add(tmp_G);
 								BValue.add(tmp_B);
 								WValue.add(tmp_W);
-								Log.d(TAG, line);
+								logger.d( line);
 							
 
 							}
@@ -1351,14 +1502,14 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 					
 	            }
 	            
-	            Log.d("light value size", String.valueOf(lightValue.size()));
+	            logger.d("light value size"+ String.valueOf(lightValue.size()));
 
 				if (RecordFlag==1) {
 					String Light_RGB_Wifi = String.valueOf(lightvalue) +" "+finalString.toString()+" "+String.valueOf(Wifi_RSSI);
-					Log.d("Light RGB wifi", Light_RGB_Wifi);
+					logger.d("Light RGB wifi"+ Light_RGB_Wifi);
 					writeJSON(outwriterAllInfo,timeSta,"rawData",Light_RGB_Wifi);
 					
-					Log.d("call add","calladd");
+					logger.d("call add");
 					sendJSON(timeSta,"rawData",Light_RGB_Wifi);
 					finalString = null;
 
@@ -1387,24 +1538,14 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     			String curTimeStr = ""+proxi_time+";   ";
     			ReadProxi = event.values[0];
     			
-    			Log.d("proxi count",String.valueOf(proxi_count));
-    			Log.d("proxi value", String.valueOf(ReadProxi));
-    			Log.d("proxi time",String.valueOf(proxi_time));
-    			Log.d("cur proxi time",String.valueOf(cur_proxi_time));
-    			Log.d("stop_proxi_time_end",String.valueOf(stop_proxi_time_end));
-    			Log.d("stop_proxi_time",String.valueOf(stop_proxi_time));
-    			Log.d("RecordFlag",String.valueOf(RecordFlag));
+    			logger.d("proxi count"+String.valueOf(proxi_count));
+    			logger.d("proxi value"+String.valueOf(ReadProxi));
+    			logger.d("proxi time"+String.valueOf(proxi_time));
+    			logger.d("cur proxi time"+String.valueOf(cur_proxi_time));
+    			logger.d("stop_proxi_time_end"+String.valueOf(stop_proxi_time_end));
+    			logger.d("stop_proxi_time"+String.valueOf(stop_proxi_time));
+    			logger.d("RecordFlag"+String.valueOf(RecordFlag));
     			
-    			
-				if (proxiThread!= null)
-				{
-					if (!proxiThread.isInterrupted());
-					{
-						proxiThread.interrupt();
-						proxiThread = null;
-						Log.d("stop thread", "stop proxithread registed light sensor");     						
-					}
-				}
     			
     			if (ReadProxi<1)
     			{
@@ -1422,7 +1563,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
             					{
             						proxiThread.interrupt();
             						proxiThread = null;
-            						Log.d("stop thread", "stop proxithread registed light sensor");     						
+            						logger.d("stop thread: stop proxithread light sensor");     						
             					}
             				}
         					
@@ -1431,7 +1572,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			    			if (proxi_thread_start ==0)
 			    			{
 			    				proxi_thread_start = 1;
-			    				Log.d("start proxithread","first start proxithread");
+			    				logger.d("start proxithread: first start proxithread");
 			    				proxiThread = new Thread() {
 
 			    					public void run() {
@@ -1441,26 +1582,25 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				    						{
 				    							if ((cur_proxi_time > stop_proxi_time_end) && (ReadProxi>1))
 				    							{
-					    							Log.d("cur proxi time in EndingCallFlag 1", String.valueOf(cur_proxi_time));
-					    							Log.d("stop_proxi_time end in EndingCallFlag 1", String.valueOf(stop_proxi_time_end));
-					    							Log.d("readProxi",String.valueOf(ReadProxi));
+					    							logger.d("cur proxi time in EndingCallFlag 1: "+ String.valueOf(cur_proxi_time));
+					    							logger.d("stop_proxi_time end in EndingCallFlag 1: "+String.valueOf(stop_proxi_time_end));
+					    							logger.d("readProxi: "+String.valueOf(ReadProxi));
 				    								break;
 				    							}
 				    							cur_proxi_time = System.currentTimeMillis();
-//				    							Log.d("cur proxi time in thread", String.valueOf(cur_proxi_time));
-//				    							Log.d("stop_proxi_time in thread", String.valueOf(stop_proxi_time));
+//				    							logger.d("cur proxi time in thread", String.valueOf(cur_proxi_time));
+//				    							logger.d("stop_proxi_time in thread", String.valueOf(stop_proxi_time));
 				    						
 				    						}
 
 				    						RecordFlag = 1;
-				    						Log.d("RecordFlag in thread",String.valueOf(RecordFlag));
+				    						logger.d("RecordFlag in thread: "+String.valueOf(RecordFlag));
 				    						unregisterProxiSensor();
 				    						
 				    						if (TestType == 1) {
 				    							if (register_light == 0) {
 				    								register_light = 1;
-				    								Log.d("register light in test type 1",
-				    										"register light in first thread");
+				    								logger.d("register light in test type 1");
 				    								registerLightSensor();
 
 				    							}
@@ -1470,8 +1610,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				    							if (runAudioTest==0){
 				    								runAudioTest=1;
 				    								runAudiotest();	
-				    								Log.d("run audio test in type 2",
-				    										"run audio test in type 2");
+				    								logger.d("run audio test in type 2");
 				    								String tmp_Light_RGB_Wifi = "0 0 0 0 0 0";
 				    								sendFinalJSON(TestType,tmp_Light_RGB_Wifi,Audio_flag);
 				    							}
@@ -1479,19 +1618,12 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				    						
 				    						if (TestType ==3){
 				    							
-				    							if (register_light == 0) {
-				    								register_light = 1;
-				    								Log.d("register light in test type 3",
-				    										"register light in test type 3");
-				    								registerLightSensor();
-				    							}
 				    							if (isS6==1)
 				    							{
 				    								if (runAudioTest==0){
 				    									runAudioTest=1;
 					    								runAudiotest();
-					    								Log.d("run audio test in type 3",
-					    										"run audio test in type 3");
+					    								logger.d("run audio test in type 3");
 				    								}
 
 				    							}
@@ -1499,6 +1631,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				    							{
 				    								Audio_flag = 0;
 				    							}
+				    							
+				    							if (register_light == 0) {
+				    								register_light = 1;
+				    								logger.d("register light in test type 3");
+				    								registerLightSensor();
+				    							}
+
 				    						}
 				    						
 				    						
@@ -1550,7 +1689,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			object.put(tag, info);
 			String content = object.toString() + "\n";
 			myWriter.append(content);
-			Log.d("write json", content);
+			logger.d("write json"+ content);
 		} catch (JSONException | IOException e) {
 			e.printStackTrace();
 		}
@@ -1558,16 +1697,16 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	
 	public void sendJSON(long timestamp, String tag, String info){
 		JSONObject tmp_object = new JSONObject();
-		Log.d("write json", "write json start");
+		logger.d("write json start");
 		try {
 			tmp_object.put("timestamp", timestamp);
 			tmp_object.put(tag, info);
 			
 			TestObject.put("raw" + String.valueOf(raw_counter), tmp_object);
 
-			Log.d("send json", tmp_object.toString());
+			logger.d("send json: "+tmp_object.toString());
 			raw_counter = raw_counter + 1;
-			Log.d("raw_counter in sendjson", String.valueOf(raw_counter));
+			logger.d("raw_counter in sendjson: "+String.valueOf(raw_counter));
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
@@ -1576,17 +1715,18 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 	public void sendFinalJSON(int Type, String info, int useAudio) {
 		try {
-			Log.d("start to send inent", "start to send inent");
+			logger.d("start to send inent");
 
-				Log.d("start to send call start", "start to send call start");
+				logger.d("start to send call start");
 				TestObject.put("AveValue", info);
 				TestObject.put("testType",Type);
 				TestObject.put("Audioflag", Audio_flag);
-				Log.d("RGBAvailable", String.valueOf(RGBAvailabe));
+				logger.d("RGBAvailable: "+String.valueOf(RGBAvailabe));
 				TestObject.put("RGBAvailable", RGBAvailabe);
         		JSONObject tmp_object = new JSONObject();
         		try {
 					tmp_object.put("deviceID", device_ID);
+					tmp_object.put("deviceModel", deviceModel);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -1600,8 +1740,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				it.putExtra("activeTest", tmp_intent_mes);
 				it.setClass(this, MyService.class);
 				this.startService(it);
-				Log.d("send active test", "active test");
-      			Log.d("send active test", tmp_intent_mes);
+				logger.d("send active test");
+      			logger.d("send active test" + tmp_intent_mes);
     			raw_counter = 0;
             	TestObject = null;
             	TestObject = new JSONObject();		

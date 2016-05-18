@@ -1,71 +1,135 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.iodetection.MainActivity" >
-
-    <TextView
+    
+    
+	<TextView
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="IOdetector!" />
+        android:textSize="24sp"
+        android:paddingLeft="10sp"
+        android:paddingTop="20sp"
+        android:text="Indoor Outdoor Detection!" />
+	
+	
+	<View
+    	android:layout_width="match_parent"
+    	android:layout_height="2dp"
+    	android:layout_marginTop = "20sp"
+    	android:background="@android:color/darker_gray"/>
+
+	<LinearLayout
+    	android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="vertical"
+    	android:layout_weight="1.0"
+    	android:paddingTop="20px" >
     
-    <Button
-        android:id="@+id/Audio_switch"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text ="Audio Test"
-        android:onClick="AudioSwitch"
-        android:layout_below="@+id/title"/>
-    
-   	<TextView
-        android:id="@+id/Audio_result"
-        android:text ="Audio result: "
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/Audio_switch" />
-        
-    <Button
-        android:id="@+id/Light_switch"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text ="Light Switch"
-        android:onClick="LightSwitch"
-        android:layout_below="@+id/Audio_result"/>
-    
-	<TextView
-        android:id="@+id/Light_result"
-        android:text ="Light result: "
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/Light_switch" />
-    
-   	<Button
-        android:id="@+id/All_switch"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text ="All Switch"
-        android:onClick="AllSwitch"
-        android:layout_below="@+id/Light_result"/>
+   		<Button
+        	android:id="@+id/All_switch"
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:text ="Issue Detection"
+            android:paddingLeft="40px"
+            android:paddingTop="20px" 
+            android:layout_marginTop="20dp"
+        	android:onClick="AllSwitch"/>
    	
-   	<TextView
-        android:id="@+id/All_result"
-        android:text ="All result: "
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/All_switch" />
+  		<ProgressBar
+  	    	android:id="@+id/process_bar"
+        	android:layout_width="match_parent"
+        	android:layout_height="5dp"
+        	android:layout_marginTop="20dp"
+        	style="@android:style/Widget.ProgressBar.Horizontal"/>
+  	
+	</LinearLayout>
+	
+	<View
+    	android:layout_width="match_parent"
+    	android:layout_height="2dp"
+    	android:layout_marginTop = "20sp"
+    	android:background="@android:color/darker_gray"/>
+
+	<LinearLayout
     
-    <TextView
-        android:id="@+id/LocationSingle_reading"
-        android:text ="Location:  "
-        android:layout_width="fill_parent"
+    	android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:layout_weight="1.0"
+    	android:orientation="vertical" >
+   	
+   		<TextView
+        	android:id="@+id/All_result"
+        	android:text ="Detection: "
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:layout_marginTop="30dp"
+        	android:layout_marginLeft="10dp"
+        	android:textSize="24sp" />
+    
+   	
+	</LinearLayout>
+	
+	<View
+    	android:layout_width="match_parent"
+    	android:layout_height="2dp"
+    	android:layout_marginTop = "20sp"
+    	android:background="@android:color/darker_gray"/>
+	
+	<TextView
+        android:id="@+id/UserInput_reading"
+        android:text ="In reality, you are: "
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/All_result" />
+        android:layout_marginTop="30dp"
+        android:textSize="26sp"/>
+   	
+	<LinearLayout
+    
+    	android:layout_width="match_parent"
+    	android:layout_height="wrap_content"
+    	android:layout_weight="1.0"
+    	android:orientation="horizontal"
+    	android:paddingTop="20px" >
+
+   	
+  		<Button
+        	android:id="@+id/Indoor_switch"
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:text ="Indoor"
+        	android:layout_marginTop="10dp"
+        	android:layout_marginLeft="35dp"
+        	android:layout_marginRight="35dp"
+        	android:paddingTop="10px"
+        	android:paddingLeft="10px"
+        	android:paddingRight="10px"
+        	android:paddingBottom="10px"
+        	android:onClick="IndoorSwitch"/>
+  	
+ 		<Button
+        	android:id="@+id/Outdoor_switch"
+        	android:layout_width="wrap_content"
+        	android:layout_height="wrap_content"
+        	android:text ="Outdoor"
+        	android:onClick="OutdoorSwitch"
+        	android:layout_marginTop="10dp"
+        	android:layout_marginLeft="35dp"
+        	android:layout_marginRight="35dp"
+        	android:paddingTop="10px"
+        	android:paddingLeft="10px"
+        	android:paddingRight="10px"
+        	android:paddingBottom="10px"/>
+ 	
+	</LinearLayout>
     
 
-</RelativeLayout>
+</LinearLayout>
 

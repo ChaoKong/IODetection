@@ -147,7 +147,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	    
 	    context = this.getApplicationContext();
 	    root = android.os.Environment.getExternalStorageDirectory();
-		dir = new File (root.getAbsolutePath() + "/IOdetector");
+		dir = new File (root.getAbsolutePath() + "/IODetection");
 		if (dir == null){
 			Log.d("fail to create dir", dir.toString());
 			
@@ -396,7 +396,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				if (calculateMode==4) {
 					Ground_truth.put("result2", tmp_object);}
 				else {
-					Ground_truth.put("result", tmp_object);
+					if (audio_in_use ==1) {
+						Ground_truth.put("result", tmp_object);
+					}
+					else
+					{
+						Ground_truth.put("result2", tmp_object);
+					}
 				}
 			}
 			if ((testType==1) || (testType==2))
