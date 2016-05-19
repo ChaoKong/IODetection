@@ -46,7 +46,9 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.LightingColorFilter;
+import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -76,7 +78,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 public class MainActivity extends Activity implements
 ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
@@ -103,7 +107,6 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 	TextView textAllResult_reading;
 	TextView textResultComparison_reading;
-	//TextView textConfidence_reading;
 	
 	
 	File ResultFile = null;
@@ -253,15 +256,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     
     private String sent_state = "FALSE";
     
-	Button AudioBtn;
+    Button AudioBtn;
 	Button IndoorBtn;
 	Button OutdoorBtn;
 	Button AllTestBtn;
+	Drawable TestBtnBackground;
 	
-
-
-    private ProgressBar mProgress;
-    private int mProgressStatus = 0;
+	
 	
 	
 
@@ -281,7 +282,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		IndoorBtn = (Button) findViewById(R.id.Indoor_switch);
 		OutdoorBtn =  (Button) findViewById(R.id.Outdoor_switch);
 		AllTestBtn=(Button) findViewById(R.id.All_switch);
-		mProgress = (ProgressBar) findViewById(R.id.process_bar);
+		AudioBtn = (Button) findViewById(R.id.AudioSwitch);
 		
 		
 		
@@ -314,7 +315,28 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				e.printStackTrace();
 			}
 		}
-
+		
+		AllTestBtn.setEnabled(true);
+		
+		TestBtnBackground = AllTestBtn.getBackground();
+		
+		isS6 =0;
+		AudioBtn.setVisibility(View.GONE);
+    	deviceModel = Build.MODEL;
+    	String S6 = "g920t";
+    	if (deviceModel.toLowerCase().contains(S6.toLowerCase())){
+    		isS6 =1;
+    		AudioBtn.setVisibility(0);
+    		audio_state = getAudioState(context);
+    		if (audio_state.equals("FALSE"))
+    		{
+    			AudioBtn.setText("Use Audio? OFF");
+    		}
+    		else
+    		{
+    			AudioBtn.setText("Use Audio?  ON");
+    		}
+    	}
 	
 	}
 	
@@ -403,6 +425,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				
 				mGoogleApiClient.connect();
 				LocationFlag = 0;
+				audio_in_use = 0;
 				
 				LocationThread = null;
 				getLocation();
@@ -425,7 +448,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 					writeToFile(Ground_truth.toString(),tmpGroundTruthFile_str);
 					updateSentState("FALSE",context);
 					Ground_truth.put("End_ground_truth",-10);
-					//SendInformation();
+					SendInformation();
 					logger.d("testType in main activity"+ String.valueOf(Result_TestType));
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
@@ -466,20 +489,20 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	
 	
 	
-//    public void updateAudioState(String state,Context context){
-//        sp_audio = PreferenceManager.getDefaultSharedPreferences(context);
-//        spEditor_audio = sp_audio.edit();
-//        spEditor_audio.putString("audio_state", state);
-//        spEditor_audio.commit();
-//        logger.d( "finish update audio state"+state);
-//    }
-//    
-//    public String getAudioState(Context context){
-//        sp1_audio = PreferenceManager.getDefaultSharedPreferences(context);
-//        String st =sp1_audio.getString("audio_state", "TRUE");
-//        logger.d("get audio state as :"+st);
-//        return st;
-//    }
+    public void updateAudioState(String state,Context context){
+        sp_audio = PreferenceManager.getDefaultSharedPreferences(context);
+        spEditor_audio = sp_audio.edit();
+        spEditor_audio.putString("audio_state", state);
+        spEditor_audio.commit();
+        logger.d( "finish update audio state"+state);
+    }
+    
+    public String getAudioState(Context context){
+        sp1_audio = PreferenceManager.getDefaultSharedPreferences(context);
+        String st =sp1_audio.getString("audio_state", "TRUE");
+        logger.d("get audio state as :"+st);
+        return st;
+    }
     
     
     public void updateSentState(String state,Context context){
@@ -533,11 +556,11 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			}
 
 			if (tmp_result == -1) {
-				tmp_result_Str = "Detection: " + "You are indoor !";
+				tmp_result_Str = "Result: " + "You are indoor !";
 				
 			} else if (tmp_result == 1) {
 
-				tmp_result_Str = "Detection: " + "You are outdoor !";
+				tmp_result_Str = "Result: " + "You are outdoor !";
 
 			}
 			NumberFormat formatter = new DecimalFormat("0.###"); 
@@ -551,13 +574,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			result1 = Integer.parseInt(splitStr_result1[0]);
 			result1_con = Double.parseDouble(splitStr_result1[1]);
 			if (result1 == -1) {
-				result1_Str = "Detection: " + "You are indoor !";
+				result1_Str = "Result: " + "You are indoor !";
 			} else if (result1 == 1) {
 				
-					result1_Str = "Detection: " + "You are outdoor !";
+					result1_Str = "Result: " + "You are outdoor !";
 				
 			} else {
-				result1_Str = "Detection: " + "Unknown";
+				result1_Str = "Result: " + "Unknown";
 			}
 			NumberFormat formatter = new DecimalFormat("0.###"); 
 			String confidence_str = formatter.format(result1_con);
@@ -566,7 +589,9 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			
 		}
 		
-		AllTestBtn.setText("Issue Detection");
+		AllTestBtn.setText("Start Detection");
+		AllTestBtn.getBackground().clearColorFilter();
+		AllTestBtn.setEnabled(true);
 		
     
     }
@@ -972,38 +997,38 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	Log.i(TAG, "init successfully");
     }
     
+    
+
+    
 		
-//	public void AudioEnableSwitch(View view) throws IOException {
-//		
-//		if (isS6==1) {
-//			audio_state = getAudioState(context);
-//			logger.d("get audio state from getAudiostate:	" + audio_state);
-//			if (audio_state.equals("FALSE")) {
-//				audio_state = "TRUE";
-//				updateAudioState(audio_state, context);
-//				AudioBtn.setText("Audio in using (push to stop audio)");
-//				logger.d("set audio in using");
-//
-//			} else {
-//				audio_state = "FALSE";
-//
-//				updateAudioState(audio_state, context);
-//				AudioBtn.setText("Audio stopped (push to use audio)");
-//				logger.d("set audio to stop");
-//			}
-//		}
-//		else
-//		{
-//        	AudioBtn.setText("Audio not supported");
-//			
-//		}
-//	}
+	public void AudioEnableSwitch(View view) throws IOException  {
+		if (isS6==1) {
+			
+			audio_state = getAudioState(context);
+			logger.d("get audio state from getAudiostate:	" + audio_state);
+			
+			if (audio_state.equals("FALSE")) {
+					AudioBtn.setText("Use Audio?  ON");
+					audio_state = "TRUE";
+					updateAudioState(audio_state, context);
+					logger.d("set audio in using");
+			
+			} else {
+					AudioBtn.setText("Use Audio? OFF");
+					audio_state = "FALSE";
+					updateAudioState(audio_state, context);
+					logger.d("set audio to stop");
+				
+			}
+		}
+	}
 	
 	
 	public void IndoorSwitch(View view) throws IOException {
 		
 		sent_state = getSentState(context);
 		logger.d("sent state in indoor switch: "+sent_state);
+		textAllResult_reading.setText("Result: " + "You are indoor !");
 		if (sent_state.equals("FALSE"))
 		{
 			updateSentState("TRUE",context);
@@ -1014,11 +1039,17 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 				Ground_truth = null;
 				Ground_truth = new JSONObject(tmp_groundth);
 				Ground_truth.put("End_ground_truth",-1);
+				if (audio_in_use==1)
+				{
+					Ground_truth.put("Start_ground_truth",-1);
+				}
+				SendInformation();
 				writeToFile("clear",tmpGroundTruthFile_str);
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
 			logger.d("ground truth in indoor switch: "+Ground_truth.toString());
 
 		}		
@@ -1028,6 +1059,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	public void OutdoorSwitch(View view) throws IOException {
 		sent_state = getSentState(context);
 		logger.d("sent state in outdoor switch: "+sent_state);
+		textAllResult_reading.setText("Result: " + "You are outdoor !");
 		if (sent_state.equals("FALSE"))
 		{
 			updateSentState("TRUE",context);
@@ -1037,12 +1069,18 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			try {
 				Ground_truth = null;
 				Ground_truth = new JSONObject(tmp_groundth);
-				Ground_truth.put("End_ground_truth",-1);
+				Ground_truth.put("End_ground_truth",1);
+				if (audio_in_use==1)
+				{
+					Ground_truth.put("Start_ground_truth",1);
+				}
+				SendInformation();
 				writeToFile("clear",tmpGroundTruthFile_str);
 			} catch (JSONException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
 			logger.d("ground truth in outdoor switch: "+Ground_truth.toString());
 
 		}
@@ -1053,7 +1091,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	
 	private void runAudiotest()
 	{
-		if (isS6==1) 
+		audio_state = getAudioState(context);
+		if ((isS6==1) && (audio_state.equals("TRUE")))
 		{
 			Audio_flag = 1;
 			startRecording();
@@ -1087,34 +1126,11 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 	public void AllSwitch(View view) throws IOException {
 
-		
+		AllTestBtn.setEnabled(false);
 		AllTestBtn.setText("Detecting...");	
-		AllTestBtn.getBackground().setColorFilter(new LightingColorFilter(0xFFFFFFFF, 0xFFAA0000));
-		textAllResult_reading.setText("Detection:	");
-		//textConfidence_reading.setText("Confidence: ");
-		
-        new Thread(new Runnable() {
-            public void run() {
-            	mProgressStatus = 0;
-                while (mProgressStatus < 100) {
-                	
-        			try {
-        				Thread.sleep(70);
-        			} catch (InterruptedException e) {
-        				// TODO Auto-generated catch block
-        				e.printStackTrace();
-        			}
-                    mProgressStatus = mProgressStatus + 5;
-
-					// Update the progress bar
-                    mProgress.post(new Runnable() {
-                        public void run() {
-                            mProgress.setProgress(mProgressStatus);
-                        }
-                    });
-                }
-            }
-        }).start();
+		AllTestBtn.getBackground().setColorFilter(new LightingColorFilter(Color.rgb(120, 176, 209),0));
+		textAllResult_reading.setText("Result:	");
+		//textConfidence_reading.setText("Confidence: ");		
 		
 		init();
 		

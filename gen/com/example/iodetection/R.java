@@ -482,14 +482,13 @@ containing a value of this type.
         public static final int powered_by_google_light=0x7f020025;
     }
     public static final class id {
-        public static final int All_result=0x7f070020;
-        public static final int All_switch=0x7f07001f;
-        public static final int Audio_result=0x7f07001c;
-        public static final int Audio_switch=0x7f07001b;
-        public static final int Light_result=0x7f07001e;
-        public static final int Light_switch=0x7f07001d;
-        public static final int LocationSingle_reading=0x7f070021;
-        public static final int action_settings=0x7f070024;
+        public static final int All_result=0x7f07001d;
+        public static final int All_switch=0x7f07001b;
+        public static final int AudioSwitch=0x7f07001c;
+        public static final int Indoor_switch=0x7f07001f;
+        public static final int Outdoor_switch=0x7f070020;
+        public static final int UserInput_reading=0x7f07001e;
+        public static final int action_settings=0x7f070021;
         public static final int adjust_height=0x7f070001;
         public static final int adjust_width=0x7f070002;
         public static final int book_now=0x7f070012;
@@ -499,7 +498,6 @@ containing a value of this type.
         public static final int cast_notification_id=0x7f070000;
         public static final int classic=0x7f070016;
         public static final int donate_with_google=0x7f070015;
-        public static final int editTextDialogUserInput=0x7f070023;
         public static final int grayscale=0x7f070017;
         public static final int holo_dark=0x7f070008;
         public static final int holo_light=0x7f070009;
@@ -516,7 +514,6 @@ containing a value of this type.
         public static final int strict_sandbox=0x7f07000c;
         public static final int terrain=0x7f070007;
         public static final int test=0x7f07000d;
-        public static final int textView1=0x7f070022;
         public static final int title=0x7f07001a;
         public static final int wrap_content=0x7f070011;
     }
@@ -525,7 +522,6 @@ containing a value of this type.
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
-        public static final int prompts=0x7f030001;
     }
     public static final class menu {
         public static final int main=0x7f0b0000;

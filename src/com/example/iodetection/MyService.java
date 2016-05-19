@@ -243,12 +243,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	            	Ground_truth = new JSONObject();	
 	            }
 	            
-				try {
-					Ground_truth.put("callEnd", tmp_test);
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+
 				Log.d("test Type in service", String.valueOf(TestType));
 				if (TestType==1)
 				{
@@ -267,6 +262,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 					if (audio_in_use==1) {
 						ProcessAudio(TestType);	
 					}
+				}
+				
+				try {
+					Ground_truth.put("callEnd", tmp_test);
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 				
 				Log.d("ground truth in active test", Ground_truth.toString());
@@ -439,6 +441,54 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 		{
 			e1.printStackTrace();
 		}
+		
+		File AudioFeatureFile = new File(Str_test);
+		BufferedReader bufferedReader_feature = null;
+		try {
+			bufferedReader_feature = new BufferedReader(new FileReader(AudioFeatureFile));
+		} catch (FileNotFoundException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		
+		StringBuilder finalString_feature = new StringBuilder();
+
+		if (bufferedReader_feature != null) {
+			String line;
+			try {
+				
+				while ((line = bufferedReader_feature.readLine()) != null) {
+					
+					finalString_feature.append(line);
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try {
+			bufferedReader_feature.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+		if (tmp_test!=null)
+		{
+			try {
+				tmp_test.put("audio_feature", finalString_feature.toString());
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		
+		
+		
+		
+		
 		jniSvmScale(Cmd_svm_scale);
 		jniSvmPredict(Cmd_svm_predict);
 		Log.d("Audio test", "finish testing");

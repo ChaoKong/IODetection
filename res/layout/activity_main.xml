@@ -25,30 +25,40 @@
     	android:layout_height="2dp"
     	android:layout_marginTop = "20sp"
     	android:background="@android:color/darker_gray"/>
+	
+	
+
 
 	<LinearLayout
     	android:layout_width="match_parent"
     	android:layout_height="wrap_content"
     	android:orientation="vertical"
-    	android:layout_weight="1.0"
-    	android:paddingTop="20px" >
-    
-   		<Button
+    	android:layout_weight="1.0" >   
+    			
+		<Button
         	android:id="@+id/All_switch"
-        	android:layout_width="wrap_content"
+        	android:layout_width="150dp"
         	android:layout_height="wrap_content"
-        	android:text ="Issue Detection"
-            android:paddingLeft="40px"
-            android:paddingTop="20px" 
+        	android:text ="Start Detection"
+        	android:paddingTop="10px"
+        	android:paddingLeft="40px"
+        	android:paddingRight="40px"
+        	android:paddingBottom="10px"
             android:layout_marginTop="20dp"
+            android:layout_marginLeft="10dp"
         	android:onClick="AllSwitch"/>
-   	
-  		<ProgressBar
-  	    	android:id="@+id/process_bar"
-        	android:layout_width="match_parent"
-        	android:layout_height="5dp"
-        	android:layout_marginTop="20dp"
-        	style="@android:style/Widget.ProgressBar.Horizontal"/>
+
+    	<Button
+        	android:id="@+id/AudioSwitch"
+        	android:layout_width="150dp"
+        	android:layout_height="wrap_content"
+        	android:paddingTop="10px"
+        	android:paddingLeft="40px"
+        	android:paddingRight="40px"
+        	android:paddingBottom="10px"
+            android:layout_marginTop="20dp"
+            android:layout_marginLeft="10dp"
+            android:onClick="AudioEnableSwitch"/>
   	
 	</LinearLayout>
 	
@@ -67,12 +77,12 @@
    	
    		<TextView
         	android:id="@+id/All_result"
-        	android:text ="Detection: "
+        	android:text ="Result: "
         	android:layout_width="wrap_content"
         	android:layout_height="wrap_content"
         	android:layout_marginTop="30dp"
         	android:layout_marginLeft="10dp"
-        	android:textSize="24sp" />
+        	android:textSize="20sp" />
     
    	
 	</LinearLayout>
@@ -89,7 +99,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="30dp"
-        android:textSize="26sp"/>
+        android:layout_marginLeft="10dp"
+        android:textSize="20sp"/>
    	
 	<LinearLayout
     
@@ -97,36 +108,34 @@
     	android:layout_height="wrap_content"
     	android:layout_weight="1.0"
     	android:orientation="horizontal"
-    	android:paddingTop="20px" >
+    	android:paddingTop="10dp" >
 
    	
   		<Button
         	android:id="@+id/Indoor_switch"
-        	android:layout_width="wrap_content"
+        	android:layout_width="120sp"
         	android:layout_height="wrap_content"
+        	android:layout_weight="1.0"
         	android:text ="Indoor"
         	android:layout_marginTop="10dp"
-        	android:layout_marginLeft="35dp"
-        	android:layout_marginRight="35dp"
-        	android:paddingTop="10px"
-        	android:paddingLeft="10px"
-        	android:paddingRight="10px"
-        	android:paddingBottom="10px"
+        	android:paddingTop="10dp"
+        	android:paddingLeft="20dp"
+        	android:paddingRight="20dp"
+        	android:paddingBottom="10dp"
         	android:onClick="IndoorSwitch"/>
   	
  		<Button
         	android:id="@+id/Outdoor_switch"
-        	android:layout_width="wrap_content"
+        	android:layout_width="120sp"
         	android:layout_height="wrap_content"
+        	android:layout_weight = "1.0"
         	android:text ="Outdoor"
         	android:onClick="OutdoorSwitch"
         	android:layout_marginTop="10dp"
-        	android:layout_marginLeft="35dp"
-        	android:layout_marginRight="35dp"
-        	android:paddingTop="10px"
-        	android:paddingLeft="10px"
-        	android:paddingRight="10px"
-        	android:paddingBottom="10px"/>
+        	android:paddingTop="10dp"
+        	android:paddingLeft="20dp"
+        	android:paddingRight="20dp"
+        	android:paddingBottom="10dp"/>
  	
 	</LinearLayout>
     
