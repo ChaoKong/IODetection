@@ -245,25 +245,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	            
 
 				Log.d("test Type in service", String.valueOf(TestType));
-				if (TestType==1)
-				{
-					ProcessLight(tmp_test, TestType);
-				}
-				if (TestType==2)
-				{
-					if (audio_in_use==1) {
-						ProcessAudio(TestType);
-					}
-				}
-				
-				if (TestType==3)
-				{
-					ProcessLight(tmp_test, TestType);
-					if (audio_in_use==1) {
-						ProcessAudio(TestType);	
-					}
-				}
-				
+	
+				processInfo(TestType);
 				try {
 					Ground_truth.put("callEnd", tmp_test);
 				} catch (JSONException e) {
@@ -295,13 +278,13 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
     public void processInfo(int testType)
     {
-    	if (tmp_call == null)
+    	if (tmp_test == null)
     	{
     		return;
     	}
 
     	try {
-			audio_in_use = tmp_call.getInt("Audioflag");
+			audio_in_use = tmp_test.getInt("Audioflag");
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -310,7 +293,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	if (audio_in_use == 0)
     	{
     		Log.d("process light", "process light");
-    		ProcessLight(tmp_call,0);
+    		ProcessLight(tmp_test,0);
     	}
     	if (audio_in_use == 1)
     	{	Log.d("process audio", "process audio");
@@ -318,7 +301,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	}    	
     }
     
-    public void ProcessLight(JSONObject tmp_json, int testType){
+    public String ProcessLight(JSONObject tmp_json, int testType){
     	
     	String AveValue;
 		try {
@@ -340,12 +323,12 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			Double CurrentTime = (double) Hours + (double) (Minutes/60);
 			
 			if (RGBAvailable == 1){
-				if ((CurrentTime > 6.5) && (CurrentTime < 20.5)) {
+				if ((CurrentTime > 6.5) && (CurrentTime < 21)) {
 					DaytimeFlag = 1;
 				}
 			}
 			else{
-				if ((CurrentTime > 6.5) && (CurrentTime < 20)) {
+				if ((CurrentTime > 6.5) && (CurrentTime < 21)) {
 					DaytimeFlag = 1;
 				}
 				
@@ -371,12 +354,18 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 	    		result_str = NightPredict(Light_Sum,Wifi_Sum);
 	    	}
 	    	Log.d("result string", result_str);
-	    	addResults(result_str,callType,calculate_mode,testType);
-	    	WriteResult(result_str);
+	    	if (audio_in_use==0) {
+	    		addResults(result_str,callType,calculate_mode,testType);
+	    		WriteResult(result_str);
+	    	}
+	    	
+	    	return result_str;
 	    	
 		} catch (JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			String tmp_result = "0"+" "+"0.0";
+			return tmp_result;
 		}
     }
     
@@ -388,30 +377,9 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			tmp_object.put("Result", result_str);
 			tmp_object.put("mode", calculateMode);
 			tmp_object.put("testType", testType);
-			if (testType ==0) {
-				if (callType==1){
-					Ground_truth.put("result", tmp_object);}
-				if (callType==2){
-					Ground_truth.put("result2", tmp_object);}
-			}
-			if (testType==3) {
-				if (calculateMode==4) {
-					Ground_truth.put("result2", tmp_object);}
-				else {
-					if (audio_in_use ==1) {
-						Ground_truth.put("result", tmp_object);
-					}
-					else
-					{
-						Ground_truth.put("result2", tmp_object);
-					}
-				}
-			}
-			if ((testType==1) || (testType==2))
-			{
-				Ground_truth.put("result2", tmp_object);
-			}
-			
+		
+			Ground_truth.put("result2", tmp_object);
+				
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}   	
@@ -484,68 +452,132 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 			}
 		}
 		
+		String audio_feature_string = finalString_feature.toString();
 		
+		String nan_str = "nan";
 		
+		if ( !audio_feature_string.toLowerCase().contains(nan_str.toLowerCase()))
+		{
 		
-		
-		
-		jniSvmScale(Cmd_svm_scale);
-		jniSvmPredict(Cmd_svm_predict);
-		Log.d("Audio test", "finish testing");
-		
-		File AudioResultFile = new File(Str_result);
-		BufferedReader bufferedReader_svm = null;
-		try {
-			bufferedReader_svm = new BufferedReader(new FileReader(AudioResultFile));
-		} catch (FileNotFoundException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
-		}
+			jniSvmScale(Cmd_svm_scale);
+			jniSvmPredict(Cmd_svm_predict);
+			Log.d("Audio test", "finish testing");
 
-		StringBuilder finalString = new StringBuilder();
-
-		if (bufferedReader_svm != null) {
-			String line;
+			File AudioResultFile = new File(Str_result);
+			BufferedReader bufferedReader_svm = null;
 			try {
-				int count = 0;
-				while ((line = bufferedReader_svm.readLine()) != null) {
-					if (count == 0) {
-						count = 1;
-						continue;
+				bufferedReader_svm = new BufferedReader(new FileReader(AudioResultFile));
+			} catch (FileNotFoundException e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
+
+			StringBuilder finalString = new StringBuilder();
+
+			if (bufferedReader_svm != null) {
+				String line;
+				try {
+					int count = 0;
+					while ((line = bufferedReader_svm.readLine()) != null) {
+						if (count == 0) {
+							count = 1;
+							continue;
+						}
+						finalString.append(line);
 					}
-					finalString.append(line);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
+			}
+			try {
+				bufferedReader_svm.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
-		try {
-			bufferedReader_svm.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
-		Str_return_result = finalString.toString();
+			Str_return_result = finalString.toString();
+		}
+		else
+		{
+			Str_return_result = "0"+" "+"0.0";
+		}
+		
+		
+		int Tmp_audio_result = 0;
+		Double Tmp_audio_con = 0.0;
 		if (Str_return_result.length() > 6) {
 			String[] splitStr = Str_return_result.split("\\s+");
-			int Tmp_result = Integer.parseInt(splitStr[0]);
-			Double Tmp_con = 0.0;
-			if (Tmp_result == -1) {
-				Tmp_con = Double.parseDouble(splitStr[2]);
+			Tmp_audio_result = Integer.parseInt(splitStr[0]);
+			Tmp_audio_con = 0.0;
+			if (Tmp_audio_result == -1) {
+				Tmp_audio_con = Double.parseDouble(splitStr[2]);
 			} else {
-				Tmp_con = Double.parseDouble(splitStr[1]);
+				Tmp_audio_con = Double.parseDouble(splitStr[1]);
 
 			}
-			Str_return_result = String.valueOf(Tmp_result) + " " + String.valueOf(Tmp_con);
-			Log.d("Audio test", Str_return_result);
+			Str_return_result = String.valueOf(Tmp_audio_result) + " " + String.valueOf(Tmp_audio_con);
+			Log.d( "audio result" ,Str_return_result); 
 		} else {
 			Str_return_result = "0" +" "+ "0.0";
 		}
-		calculate_mode = 4;
-		addResults(Str_return_result,callType,calculate_mode,testType);	
-		WriteResult(Str_return_result);
+		
+		if (tmp_test!=null)
+		{
+			try {
+				tmp_test.put("audio_result", Str_return_result);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		
+		String light_result_str = ProcessLight(tmp_test,testType);
+		
+		Log.d( "light result",light_result_str);
+
+		String[] splitLightStr = light_result_str.split("\\s+");
+		int Tmp_light_result = Integer.parseInt(splitLightStr[0]);
+		Double Tmp_light_con = Double.parseDouble(splitLightStr[1]);
+		
+		int Result = 0;
+		Double Result_con = 0.0;
+		if (Tmp_light_result == Tmp_audio_result) {
+			Result = Tmp_light_result;
+			Result_con = 1 - (1 - Tmp_light_con) * (1 - Tmp_audio_con);
+		} else {
+			if (Tmp_light_con > Tmp_audio_con) {
+				Result = Tmp_light_result;
+				Result_con = Tmp_light_con * (1 - Tmp_audio_con);
+			} else {
+				Result = Tmp_audio_result;
+				Result_con = Tmp_audio_con * (1 - Tmp_light_con);
+			}
+			
+			if (Result_con>1.0)
+			{
+				Result_con=1.0;
+			}
+		}
+		
+		String final_return_result = String.valueOf(Result) + " " + String.valueOf(Result_con);
+		
+		if (tmp_test!=null)
+		{
+			try {
+				tmp_test.put("combined_result", final_return_result);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		//final_return_result = Str_return_result;
+		Log.d( "final result",final_return_result);
+		calculate_mode = 4;				
+		addResults(final_return_result,callType,calculate_mode,testType);	
+		WriteResult(final_return_result);
     }
 	
     private String svmPredictResult(double Light_Sum, double R_Sum, double G_Sum, double B_Sum, double W_Sum){

@@ -24,8 +24,7 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HTTP;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-
+import umich.robustnet.iodetection.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
@@ -245,6 +244,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     //   1 : light test;  2: Audio test; 3: All test;
     
     public String deviceModel;
+    public String deviceOSversion;
     
     private SharedPreferences sp_audio,sp1_audio;
     private SharedPreferences.Editor spEditor_audio;
@@ -457,25 +457,15 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
 
 				try {
 					
-					if ((Result_TestType==3) && (audio_in_use==1))
-					{
-						Result1 = Ground_truth.getJSONObject("result");
+				
 						
-						Result2 = Ground_truth.getJSONObject("result2");
-						result1_Str = Result1.getString("Result");
-						result2_Str = Result2.getString("Result");
-						calculate_mode1 = Result1.getInt("mode");
-						calculate_mode2 = Result2.getInt("mode");
-						printResults(result2_Str, 2, calculate_mode2,3);}
-					else
-					{
 						Result2 = Ground_truth.getJSONObject("result2");
 				
 						result2_Str = Result2.getString("Result");
-		
-						calculate_mode2 = Result2.getInt("mode");
-						printResults(result2_Str, 2, calculate_mode2,Result_TestType);}
 					
+						calculate_mode2 = Result2.getInt("mode");
+						printResults(result2_Str, 2, calculate_mode2,3);
+			
 
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
@@ -525,70 +515,25 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	
     	String tmp_result_str = result_str;
     	
-		if ((testType == 3) && (audio_in_use ==1) ) {
-			
-			int tmp_result = 0;
-			double tmp_confidence = 0;
-			String tmp_result_Str = "";
-			String[] splitStr_result1 = result1_Str.split("\\s+");
-			result1 = Integer.parseInt(splitStr_result1[0]);
-			result1_con = Double.parseDouble(splitStr_result1[1]);
-			
-			String[] splitStr_result2 = result2_Str.split("\\s+");
-			result2 = Integer.parseInt(splitStr_result2[0]);
-			result2_con = Double.parseDouble(splitStr_result2[1]);
-			logger.d("result1_str: "+result1_Str);
-			logger.d("result2_str: "+result2_Str);
-			
-			
-			if (result1 == result2) {
-				tmp_result = result1;
-				tmp_confidence = 1 - (1 - result1_con) * (1 - result2_con);
-			} else {
-				if (result1_con > result2_con) {
-					tmp_result = result1;
-					tmp_confidence = result1_con * (1 - result2_con);
-				} else {
-					tmp_result = result2;
-					tmp_confidence = result2_con * (1 - result1_con);
+	
 
-				}
-			}
+		String[] splitStr_result1 = tmp_result_str.split("\\s+");
+		result2 = Integer.parseInt(splitStr_result1[0]);
+		result2_con = Double.parseDouble(splitStr_result1[1]);
+		if (result2 == -1) {
+			result2_Str = "Result: " + "You are indoor !";
+		} else if (result1 == 1) {
 
-			if (tmp_result == -1) {
-				tmp_result_Str = "Result: " + "You are indoor !";
-				
-			} else if (tmp_result == 1) {
+			result2_Str = "Result: " + "You are outdoor !";
 
-				tmp_result_Str = "Result: " + "You are outdoor !";
-
-			}
-			NumberFormat formatter = new DecimalFormat("0.###"); 
-			String confidence_str = formatter.format(tmp_confidence);
-			textAllResult_reading.setText(tmp_result_Str);
-			//textConfidence_reading.setText("Confidence: "+confidence_str);
+		} else {
+			result2_Str = "Result: " + "Unknown";
 		}
-
-		else {
-			String[] splitStr_result1 = tmp_result_str.split("\\s+");
-			result1 = Integer.parseInt(splitStr_result1[0]);
-			result1_con = Double.parseDouble(splitStr_result1[1]);
-			if (result1 == -1) {
-				result1_Str = "Result: " + "You are indoor !";
-			} else if (result1 == 1) {
-				
-					result1_Str = "Result: " + "You are outdoor !";
-				
-			} else {
-				result1_Str = "Result: " + "Unknown";
-			}
-			NumberFormat formatter = new DecimalFormat("0.###"); 
-			String confidence_str = formatter.format(result1_con);
-			textAllResult_reading.setText(result1_Str);
-			//textConfidence_reading.setText("Confidence: "+confidence_str);
+		NumberFormat formatter = new DecimalFormat("0.###");
+		String confidence_str = formatter.format(result2_con);
+		textAllResult_reading.setText(result2_Str);
+		// textConfidence_reading.setText("Confidence: "+confidence_str);
 			
-		}
-		
 		AllTestBtn.setText("Start Detection");
 		AllTestBtn.getBackground().clearColorFilter();
 		AllTestBtn.setEnabled(true);
@@ -992,6 +937,8 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
     	if (deviceModel.toLowerCase().contains(S6.toLowerCase())){
     		isS6 =1;
     	}
+    	
+    	deviceOSversion = android.os.Build.VERSION.RELEASE;
     	
     	TestObject = new JSONObject();
     	Log.i(TAG, "init successfully");
@@ -1743,6 +1690,7 @@ ConnectionCallbacks, OnConnectionFailedListener,LocationListener {
         		try {
 					tmp_object.put("deviceID", device_ID);
 					tmp_object.put("deviceModel", deviceModel);
+					tmp_object.put("deviceOS", deviceOSversion);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
